@@ -1,6 +1,11 @@
 import jwt from 'jsonwebtoken';
+import { Request, Response, NextFunction } from 'express';
 
-const authMiddleware = (req, res, next) => {
+interface CustomRequest extends Request {
+  user?: any;
+}
+
+const authMiddleware = (req: CustomRequest, res: Response, next: NextFunction) => {
   const token = req.cookies.token;
   
   if (!token) {
@@ -13,8 +18,8 @@ const authMiddleware = (req, res, next) => {
     
     // リフレッシュトークンがあればアクセストークンを再発行
     try {
-      const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
-      const newAccessToken = jwt.sign({ id: decoded.id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+      const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET!) as jwt.JwtPayload;
+      const newAccessToken = jwt.sign({ id: decoded.id }, process.env.JWT_SECRET!, { expiresIn: '15m' });
 
       // 新しいアクセストークンをクッキーに設定
       res.cookie('token', newAccessToken, {
@@ -32,7 +37,7 @@ const authMiddleware = (req, res, next) => {
   } else {
     // 通常のトークンが有効であれば、それを使って認証
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as jwt.JwtPayload;
       req.user = decoded;
       next(); // リクエストを次の処理に渡す
     } catch (error) {

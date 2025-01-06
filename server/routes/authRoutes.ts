@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Router, Request, Response } from 'express';
 import {
   registerUser,
   loginUser,
@@ -7,16 +7,16 @@ import {
   refreshToken,
   isAuthenticated,
   home
-} from '../controllers/authController.js';
+} from '../controllers/authController';
 
-const router = express.Router();
+const router: Router = express.Router();
 
-router.post('/register', registerUser);
-router.post('/login', loginUser);
-router.post('/logout', logoutUser);
-router.get('/current-user', getCurrentUser);
-router.post('/refresh-token', refreshToken);
-router.get('/is-authenticated', isAuthenticated);
-router.get('/home', home);
+router.post('/register', registerUser as express.RequestHandler);
+router.post('/login', loginUser as express.RequestHandler);
+router.post('/logout', logoutUser as express.RequestHandler);
+router.get('/current-user', getCurrentUser as express.RequestHandler);
+router.post('/refresh-token', refreshToken as express.RequestHandler);
+router.get('/is-authenticated', isAuthenticated as express.RequestHandler);
+router.get('/home', home as express.RequestHandler);
 
 export default router;

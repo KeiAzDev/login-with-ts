@@ -1,9 +1,18 @@
 import bcrypt from 'bcryptjs';
-import User from '../models/userModel.js';
+import User from '../models/userModels';
 import { generateToken } from '../config/auth.js';
 import jwt from 'jsonwebtoken';
+import { Request, Response } from 'express';
+import { JwtPayload } from 'jsonwebtoken';
 
-export const registerUser = async (req, res) => {
+interface UserDocument {
+  _id: string;
+  username: string;
+  email: string;
+  password: string;
+}
+
+export const registerUser = async (req: Request, res: Response) => {
   const { username, email, password } = req.body;
 
   // バリデーション
@@ -31,8 +40,8 @@ export const registerUser = async (req, res) => {
   await newUser.save();
 
   // ログイン時と同様にトークンを生成
-  const accessToken = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
-  const refreshToken = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+  const accessToken = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET!, { expiresIn: '15m' });
+  const refreshToken = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET!, { expiresIn: '30d' });
 
   // クッキーにトークンを設定
   res.cookie('token', accessToken, {
@@ -55,7 +64,7 @@ export const registerUser = async (req, res) => {
 }
 };
 
-export const loginUser = async (req, res) => {
+export const loginUser = async (req: Request, res: Response) => {
   const { username, email, password } = req.body;
 
   const user = await User.findOne({ $or: [{ username }, { email }] });
@@ -68,8 +77,8 @@ export const loginUser = async (req, res) => {
     return res.status(400).json({ message: 'Invalid password' });
   }
 
-  const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
-  const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+  const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, { expiresIn: '15m' });
+  const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, { expiresIn: '30d' });
 
   res.cookie('token', accessToken, {
     httpOnly: true,
@@ -88,14 +97,14 @@ export const loginUser = async (req, res) => {
   res.status(200).json({ message: 'Login successful' });
 };
 
-export const getCurrentUser = async (req, res) => {
+export const getCurrentUser = async (req: Request, res: Response) => {
   try {
     const token = req.cookies.token;
     if (!token) {
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
     const user = await User.findById(decoded.id).select('-password');
     
     if (!user) {
@@ -108,21 +117,21 @@ export const getCurrentUser = async (req, res) => {
   }
 };
 
-export const logoutUser = async (req, res) => {
+export const logoutUser = async (req: Request, res: Response) => {
   res.clearCookie('token');
   res.clearCookie('refreshToken');
   res.status(200).json({ message: 'Logged out successfully' });
 };
 
-export const refreshToken = async (req, res) => {
+export const refreshToken = async (req: Request, res: Response) => {
   try {
     const refreshToken = req.cookies.refreshToken;
     if (!refreshToken) {
       return res.status(401).json({ message: 'Refresh token not found' });
     }
 
-    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
-    const newAccessToken = jwt.sign({ id: decoded.id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET!) as JwtPayload;
+    const newAccessToken = jwt.sign({ id: decoded.id }, process.env.JWT_SECRET!, { expiresIn: '15m' });
 
     res.cookie('token', newAccessToken, {
       httpOnly: true,
@@ -137,30 +146,34 @@ export const refreshToken = async (req, res) => {
   }
 };
 
-export const isAuthenticated = async (req, res) => {
+export const isAuthenticated = async (req: Request, res: Response) => {
   try {
     const token = req.cookies.token;
     if (!token) {
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
-    jwt.verify(token, process.env.JWT_SECRET);
+    jwt.verify(token, process.env.JWT_SECRET!);
     res.json({ authenticated: true });
   } catch (error) {
     res.json({ authenticated: false });
   }
 };
 
-export const home = async (req, res) => {
+export const home = async (req: Request, res: Response) => {
   try {
     const token = req.cookies.token;
     if (!token) {
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
     const user = await User.findById(decoded.id).select('-password');
     
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     res.json({
       message: 'Welcome to the homepage',
       user: {
